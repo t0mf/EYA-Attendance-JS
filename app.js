@@ -105,8 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const lastWeeksAbsent = dateEntries[dateEntries.length - 1][1];
                 if (lastWeeksAbsent === 2) {
                     person.action = "text";
-                } else if (lastWeeksAbsent === 3 || lastWeeksAbsent === 4) {
+                } else if (lastWeeksAbsent === 3) {
                     person.action = "post card";
+                } else if (lastWeeksAbsent === 4) {
+                    person.action = "phone call";
                 } else if (lastWeeksAbsent === 5) {
                     person.action = "visit";
                 }
