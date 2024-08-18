@@ -44,20 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const values = row.split(',').map(value => value.trim());
             const firstName = values[0] || '';
             const lastName = values[1] || '';
-            const percent = values[2] || '';
 
-            // Create an object for each person
+            // Initialize the person object
             let person = {
                 firstName,
                 lastName,
-                percent,
                 memberType: "N/A", // Default memberType
-                dates: []
+                weeksAbsent: 99, // Start at 99 if there has never been a value
+                beenThroughProcess: false, // Default beenThroughProcess
+                dates: [] // Initialize dates array
             };
 
-            // Track added dates to avoid duplicates and weeks absent
+            // Track added dates to avoid duplicates and manage weeksAbsent
             const addedDates = new Set();
-            let weeksAbsent = 99; // Start at 99 if there has never been a value
 
             // Fill in unique date data
             dateHeaders.forEach((dateHeader, index) => {
@@ -67,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (parsedDate && isSunday(parsedDate) && !addedDates.has(dateHeader)) {
                     // If there's a value, reset weeksAbsent to 0, otherwise increment it
                     if (dateValue) {
-                        weeksAbsent = 0;
+                        person.weeksAbsent = 0;
 
                         // Determine the memberType based on the last non-absent week
                         if (dateValue === "attended as member") {
@@ -78,15 +77,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             person.memberType = "leader";
                         }
                     } else {
-                        if (weeksAbsent !== 99) { // If it wasn't already 99, increment it
-                            weeksAbsent++;
+                        if (person.weeksAbsent !== 99) { // If it wasn't already 99, increment it
+                            person.weeksAbsent++;
                         }
+                    }
+
+                    // Check if weeksAbsent exceeds 5 to set beenThroughProcess to true
+                    if (person.weeksAbsent > 5) {
+                        person.beenThroughProcess = true;
                     }
 
                     person.dates.push({
                         date: dateHeader,
-                        value: dateValue || '', // Store empty values as well
-                        weeksAbsent: weeksAbsent
+                        weeksAbsent: person.weeksAbsent
                     });
 
                     addedDates.add(dateHeader); // Mark date as added
