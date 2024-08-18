@@ -54,18 +54,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 dates: []
             };
 
-            // Track added dates to avoid duplicates
+            // Track added dates to avoid duplicates and weeks absent
             const addedDates = new Set();
+            let weeksAbsent = 99; // Start at 99 if there has never been a value
 
             // Fill in unique date data
             dateHeaders.forEach((dateHeader, index) => {
                 let dateValue = values[index + 3]; // Dates start from index 3
                 let parsedDate = parseDate(dateHeader);
+
                 if (parsedDate && isSunday(parsedDate) && !addedDates.has(dateHeader)) {
+                    // If there's a value, reset weeksAbsent to 0, otherwise increment it
+                    if (dateValue) {
+                        weeksAbsent = 0;
+                    } else {
+                        if (weeksAbsent !== 99) { // If it wasn't already 99, increment it
+                            weeksAbsent++;
+                        }
+                    }
+
                     person.dates.push({
                         date: dateHeader,
-                        value: dateValue || '' // Store empty values as well
+                        value: dateValue || '', // Store empty values as well
+                        weeksAbsent: weeksAbsent
                     });
+
                     addedDates.add(dateHeader); // Mark date as added
                 }
             });
