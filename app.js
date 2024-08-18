@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('dropZone');
     const output = document.getElementById('output');
+    const downloadReports = document.getElementById('downloadReports');
+    let csvData = null;
+    let attendanceCSVContent = '';
+    let outreachCSVContent = '';
 
     // Prevent default behavior (Prevent file from being opened)
     dropZone.addEventListener('dragover', (event) => {
@@ -16,16 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         dropZone.classList.remove('dragover');
 
+        // Disable the download button and erase the previous output
+        downloadReports.disabled = true;
+        output.innerHTML = "";
+
         const file = event.dataTransfer.files[0];
         if (file && file.type === 'text/csv') {
             const reader = new FileReader();
 
             reader.onload = (e) => {
                 const text = e.target.result;
-                const data = parseCSV(text);
-                displayData(data);
-                downloadCSV(data);
-                downloadFilteredCSV(data);
+                csvData = parseCSV(text); // Store the parsed data for later use
+                displayFilteredCSV(csvData);
+                const { csvContent: attendanceContent, lastDate } = generateAttendanceCSVContent(csvData);
+                const { csvRows: outreachRows } = generateFilteredCSVContent(csvData);
+                attendanceCSVContent = attendanceContent;
+                outreachCSVContent = outreachRows.map(row => row.join(',')).join('\n');
+                downloadReports.disabled = false;
             };
 
             reader.readAsText(file);
@@ -51,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let person = {
                 firstName,
                 lastName,
-                memberType: "n/a", // Default memberType
+                memberType: "N/A", // Default memberType
                 beenThroughProcess: false, // Default beenThroughProcess
                 action: "", // Default action
                 dates: {} // Initialize dates object
@@ -75,11 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Determine the memberType based on the last non-absent week
                         if (dateValue === "attended as member") {
-                            person.memberType = "member";
+                            person.memberType = "Member";
                         } else if (dateValue === "attended as visitor") {
-                            person.memberType = "visitor";
+                            person.memberType = "Visitor";
                         } else if (dateValue === "attended as leader") {
-                            person.memberType = "leader";
+                            person.memberType = "Leader";
                         }
                     } else {
                         if (weeksAbsent !== 99) { // If it wasn't already 99, increment it
@@ -104,13 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dateEntries.length > 0) {
                 const lastWeeksAbsent = dateEntries[dateEntries.length - 1][1];
                 if (lastWeeksAbsent === 2) {
-                    person.action = "text";
+                    person.action = "Text";
                 } else if (lastWeeksAbsent === 3) {
-                    person.action = "post card";
+                    person.action = "Post Card";
                 } else if (lastWeeksAbsent === 4) {
-                    person.action = "phone call";
+                    person.action = "Phone Call";
                 } else if (lastWeeksAbsent === 5) {
-                    person.action = "visit";
+                    person.action = "Visit";
                 }
             }
 
@@ -129,10 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.getDay() === 0; // 0 represents Sunday
     }
 
-    function displayData(data) {
-        output.textContent = JSON.stringify(data, null, 2);
-    }
-
     function getLastDate(data) {
         // Get the last date from the first person’s dates object
         if (data.length > 0) {
@@ -145,10 +152,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return "";
     }
 
-    function downloadCSV(data) {
+    function generateFilteredCSVContent(data) {
+        const lastDate = getLastDate(data);
+        // Filter data: persons with beenThroughProcess set to false and action not blank
+        const filteredData = data.filter(person => !person.beenThroughProcess && person.action !== "");
+
+        // Create CSV header
+        const headerRow = ["First Name", "Last Name", "Member Type", "Text", "Post Card", "Phone Call", "Visit"];
+
+        // Create CSV rows
+        const csvRows = [headerRow];
+        filteredData.forEach(person => {
+            const row = [
+                person.firstName,
+                person.lastName,
+                person.memberType,
+                person.action === "Text" ? person.action : "",
+                person.action === "Post Card" ? person.action : "",
+                person.action === "Phone Call" ? person.action : "",
+                person.action === "Visit" ? person.action : ""
+            ];
+            csvRows.push(row);
+        });
+
+        return { csvRows, lastDate };
+    }
+
+    function generateAttendanceCSVContent(data) {
         const lastDate = getLastDate(data);
         // Create CSV header
-        const headers = ["firstName", "lastName", "memberType", "beenThroughProcess", "action"];
+        const headers = ["First Name", "Last Name", "Member Type", "Through Process", "Action"];
         // Collect all unique date headers in the order they are encountered
         const dateHeaders = [];
         const dateHeaderSet = new Set(); // To check for duplicates
@@ -182,61 +215,73 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create CSV content
         const csvContent = csvRows.join('\n');
 
-        // Trigger download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `attendance_${lastDate}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        return { csvContent, lastDate };
     }
 
-    function downloadFilteredCSV(data) {
-        const lastDate = getLastDate(data);
-        // Filter data: persons with beenThroughProcess set to false and action not blank
-        const filteredData = data.filter(person => !person.beenThroughProcess && person.action !== "");
+    function displayFilteredCSV(data) {
+        const { csvRows } = generateFilteredCSVContent(data);
 
-        // Create CSV header
-        const headerRow = ["firstName", "lastName", "memberType", "Text", "Post Card", "Phone Call", "Visit"];
-
-        // Capitalize the first letter of each word
-        const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
-        // Create CSV rows
-        const csvRows = [headerRow.join(',')];
-        filteredData.forEach(person => {
-            const actionCapitalized = {
-                "text": capitalize("text"),
-                "post card": capitalize("post card"),
-                "phone call": capitalize("phone call"),
-                "visit": capitalize("visit")
-            };
-
-            const row = [
-                person.firstName,
-                person.lastName,
-                person.memberType,
-                actionCapitalized[person.action] === capitalize("text") ? capitalize("text") : "",
-                actionCapitalized[person.action] === capitalize("post card") ? capitalize("post card") : "",
-                actionCapitalized[person.action] === capitalize("phone call") ? capitalize("phone call") : "",
-                actionCapitalized[person.action] === capitalize("visit") ? capitalize("visit") : ""
-            ].join(',');
-            csvRows.push(row);
+        // Display CSV content as a table
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRowElement = document.createElement('tr');
+        csvRows[0].forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            th.style.border = '1px solid #ddd';
+            th.style.padding = '8px';
+            th.style.textAlign = 'left';
+            headerRowElement.appendChild(th);
         });
+        thead.appendChild(headerRowElement);
+        table.appendChild(thead);
 
-        // Create CSV content
-        const csvContent = csvRows.join('\n');
+        // Create table body
+        const tbody = document.createElement('tbody');
+        csvRows.slice(1).forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach(cell => {
+                const td = document.createElement('td');
+                td.textContent = cell;
+                td.style.border = '1px solid #ddd';
+                td.style.padding = '8px';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
 
-        // Trigger download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `outreach_${lastDate}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        // Clear previous output and append the table
+        output.innerHTML = '';
+        output.appendChild(table);
+
+        // Enable and set up download button
+        downloadReports.disabled = false;
+
+        downloadReports.onclick = () => {
+            // Download Attendance CSV
+            const blobAttendance = new Blob([attendanceCSVContent], { type: 'text/csv;charset=utf-8;' });
+            const urlAttendance = URL.createObjectURL(blobAttendance);
+            const aAttendance = document.createElement('a');
+            aAttendance.href = urlAttendance;
+            aAttendance.download = `attendance_${getLastDate(csvData)}.csv`;
+            document.body.appendChild(aAttendance);
+            aAttendance.click();
+            document.body.removeChild(aAttendance);
+
+            // Download Outreach CSV
+            const blobOutreach = new Blob([outreachCSVContent], { type: 'text/csv;charset=utf-8;' });
+            const urlOutreach = URL.createObjectURL(blobOutreach);
+            const aOutreach = document.createElement('a');
+            aOutreach.href = urlOutreach;
+            aOutreach.download = `outreach_${getLastDate(csvData)}.csv`;
+            document.body.appendChild(aOutreach);
+            aOutreach.click();
+            document.body.removeChild(aOutreach);
+        };
     }
 });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV Drag and Drop</title>
+    <title>EYA Attendance Tool</title>
     <style>
         #dropZone {
             width: 100%;
@@ -20,10 +20,27 @@
             border-color: #3333cc;
             background-color: #f0f8ff;
         }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px; /* Optional: adds space above the button */
+        }
+        #downloadReports {
+            padding: 10px 20px; /* Optional: adds padding inside the button */
+            font-size: 16px; /* Optional: sets the font size */
+            cursor: pointer; /* Optional: changes the cursor to a pointer on hover */
+        }
+        #downloadReports:disabled {
+            background-color: #cccccc; /* Optional: sets a different background color for disabled state */
+            cursor: not-allowed; /* Optional: changes the cursor to indicate the button is disabled */
+        }
     </style>
 </head>
 <body>
-    <div id="dropZone">Drop CSV file here</div>
+    <div id="dropZone">Drop a Planning Center Attendance Report Here (.csv)</div>
+    <div class="button-container">
+        <button id="downloadReports" disabled>Download Reports</button>
+    </div>
     <pre id="output"></pre>
 
     <script src="app.js"></script>
