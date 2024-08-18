@@ -54,15 +54,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 dates: []
             };
 
-            // Fill in date data
+            // Track added dates to avoid duplicates
+            const addedDates = new Set();
+
+            // Fill in unique date data
             dateHeaders.forEach((dateHeader, index) => {
                 let dateValue = values[index + 3]; // Dates start from index 3
                 let parsedDate = parseDate(dateHeader);
-                if (parsedDate && isSunday(parsedDate)) {
+                if (parsedDate && isSunday(parsedDate) && !addedDates.has(dateHeader)) {
                     person.dates.push({
                         date: dateHeader,
                         value: dateValue || '' // Store empty values as well
                     });
+                    addedDates.add(dateHeader); // Mark date as added
                 }
             });
 
