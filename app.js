@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rows = lines.slice(1);
 
         // Extract date headers
-        const dateHeaders = headers.slice(3); // Start from index 3 to get date columns
+        const dateHeaders = headers.slice(3); // Assuming date columns start from index 3
 
         return rows.map(row => {
             const values = row.split(',').map(value => value.trim());
@@ -57,14 +57,28 @@ document.addEventListener('DOMContentLoaded', () => {
             // Fill in date data
             dateHeaders.forEach((dateHeader, index) => {
                 let dateValue = values[index + 3]; // Dates start from index 3
-                person.dates.push({
-                    date: dateHeader,
-                    value: dateValue || '' // Handle empty values within dates
-                });
+                let parsedDate = parseDate(dateHeader);
+                if (parsedDate && isSunday(parsedDate)) {
+                    person.dates.push({
+                        date: dateHeader,
+                        value: dateValue || '' // Store empty values as well
+                    });
+                }
             });
 
             return person;
         });
+    }
+
+    function parseDate(dateString) {
+        // Assuming dateString is in mm/dd/yyyy format
+        let [month, day, year] = dateString.split('/').map(num => parseInt(num, 10));
+        // Create and return a new Date object
+        return new Date(year, month - 1, day);
+    }
+
+    function isSunday(date) {
+        return date.getDay() === 0; // 0 represents Sunday
     }
 
     function displayData(data) {
