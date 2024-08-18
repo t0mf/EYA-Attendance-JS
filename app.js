@@ -133,7 +133,20 @@ document.addEventListener('DOMContentLoaded', () => {
         output.textContent = JSON.stringify(data, null, 2);
     }
 
+    function getLastDate(data) {
+        // Get the last date from the first person’s dates object
+        if (data.length > 0) {
+            const firstPersonDates = data[0].dates;
+            const dateKeys = Object.keys(firstPersonDates);
+            const lastDate = dateKeys.length > 0 ? dateKeys[dateKeys.length - 1] : "";
+            // Replace "/" with "-" in the last date
+            return lastDate.replace(/\//g, '-');
+        }
+        return "";
+    }
+
     function downloadCSV(data) {
+        const lastDate = getLastDate(data);
         // Create CSV header
         const headers = ["firstName", "lastName", "memberType", "beenThroughProcess", "action"];
         // Collect all unique date headers in the order they are encountered
@@ -174,13 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'attendance.csv';
+        a.download = `attendance_${lastDate}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
     }
 
     function downloadFilteredCSV(data) {
+        const lastDate = getLastDate(data);
         // Filter data: persons with beenThroughProcess set to false and action not blank
         const filteredData = data.filter(person => !person.beenThroughProcess && person.action !== "");
 
@@ -220,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'outreach.csv';
+        a.download = `outreach_${lastDate}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
