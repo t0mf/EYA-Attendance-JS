@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 firstName,
                 lastName,
                 percent,
+                memberType: "N/A", // Default memberType
                 dates: []
             };
 
@@ -67,6 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     // If there's a value, reset weeksAbsent to 0, otherwise increment it
                     if (dateValue) {
                         weeksAbsent = 0;
+
+                        // Determine the memberType based on the last non-absent week
+                        if (dateValue === "attended as member") {
+                            person.memberType = "member";
+                        } else if (dateValue === "attended as visitor") {
+                            person.memberType = "visitor";
+                        } else if (dateValue === "attended as leader") {
+                            person.memberType = "leader";
+                        }
                     } else {
                         if (weeksAbsent !== 99) { // If it wasn't already 99, increment it
                             weeksAbsent++;
