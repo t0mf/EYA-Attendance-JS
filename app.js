@@ -37,13 +37,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const headers = lines[0].split(',').map(header => header.trim());
         const rows = lines.slice(1);
 
+        // Extract date headers
+        const dateHeaders = headers.slice(3); // Start from index 3 to get date columns
+
         return rows.map(row => {
             const values = row.split(',').map(value => value.trim());
-            let obj = {};
-            headers.forEach((header, index) => {
-                obj[header] = values[index];
+            const firstName = values[0] || '';
+            const lastName = values[1] || '';
+            const percent = values[2] || '';
+
+            // Create an object for each person
+            let person = {
+                firstName,
+                lastName,
+                percent,
+                dates: []
+            };
+
+            // Fill in date data
+            dateHeaders.forEach((dateHeader, index) => {
+                let dateValue = values[index + 3]; // Dates start from index 3
+                person.dates.push({
+                    date: dateHeader,
+                    value: dateValue || '' // Handle empty values within dates
+                });
             });
-            return obj;
+
+            return person;
         });
     }
 
