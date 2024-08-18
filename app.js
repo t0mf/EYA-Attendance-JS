@@ -2,9 +2,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('dropZone');
     const output = document.getElementById('output');
     const downloadReports = document.getElementById('downloadReports');
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.style.display = 'none'; // Hide the file input
+
     let csvData = null;
     let attendanceCSVContent = '';
     let outreachCSVContent = '';
+
+    // Add the file input to the document
+    document.body.appendChild(fileInput);
 
     // Prevent default behavior (Prevent file from being opened)
     dropZone.addEventListener('dragover', (event) => {
@@ -19,12 +27,24 @@ document.addEventListener('DOMContentLoaded', () => {
     dropZone.addEventListener('drop', (event) => {
         event.preventDefault();
         dropZone.classList.remove('dragover');
+        handleFile(event.dataTransfer.files[0]);
+    });
 
+    dropZone.addEventListener('click', () => {
+        fileInput.click(); // Trigger file input when dropZone is clicked
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    function handleFile(file) {
         // Disable the download button and erase the previous output
         downloadReports.disabled = true;
         output.innerHTML = "";
-
-        const file = event.dataTransfer.files[0];
+        
         if (file && file.type === 'text/csv') {
             const reader = new FileReader();
 
@@ -41,9 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             reader.readAsText(file);
         } else {
-            alert('Please drop a CSV file.');
+            alert('Please upload a valid CSV file.');
         }
-    });
+    }
 
     function parseCSV(text) {
         const lines = text.split('\n').filter(line => line.trim() !== '');
