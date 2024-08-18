@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = parseCSV(text);
                 displayData(data);
                 downloadCSV(data);
+                downloadFilteredCSV(data);
             };
 
             reader.readAsText(file);
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Track added dates to avoid duplicates and manage weeksAbsent
             const addedDates = new Set();
             let weeksAbsent = 99; // Start at 99 if there has never been a value
+            let seenAtLeastOnce = false; // Flag to track if the person has been seen
 
             // Fill in unique date data
             dateHeaders.forEach((dateHeader, index) => {
@@ -66,9 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 let parsedDate = parseDate(dateHeader);
 
                 if (parsedDate && isSunday(parsedDate) && !addedDates.has(dateHeader)) {
-                    // If there's a value, reset weeksAbsent to 0, otherwise increment it
+                    // If there's a value, reset weeksAbsent to 0 and set seenAtLeastOnce to true
                     if (dateValue) {
                         weeksAbsent = 0;
+                        seenAtLeastOnce = true;
 
                         // Determine the memberType based on the last non-absent week
                         if (dateValue === "attended as member") {
@@ -84,11 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    // Check if weeksAbsent exceeds 5 to set beenThroughProcess to true
-                    if (weeksAbsent > 5) {
+                    // Set beenThroughProcess to true if seenAtLeastOnce is true and weeksAbsent is greater than 5
+                    if (seenAtLeastOnce && weeksAbsent > 5) {
                         person.beenThroughProcess = true;
                     }
 
+                    // Add the date and weeksAbsent to the person object
                     person.dates[dateHeader] = weeksAbsent;
 
                     addedDates.add(dateHeader); // Mark date as added
@@ -133,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Collect all unique date headers in the order they are encountered
         const dateHeaders = [];
         const dateHeaderSet = new Set(); // To check for duplicates
-    
+
         data.forEach(person => {
             Object.keys(person.dates).forEach(date => {
                 if (!dateHeaderSet.has(date)) {
@@ -142,10 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-    
+
         // Create CSV header row
         const headerRow = [...headers, ...dateHeaders].join(',');
-    
+
         // Create CSV rows
         const csvRows = [headerRow];
         data.forEach(person => {
@@ -159,16 +163,62 @@ document.addEventListener('DOMContentLoaded', () => {
             ].join(',');
             csvRows.push(row);
         });
-    
+
         // Create CSV content
         const csvContent = csvRows.join('\n');
-    
+
         // Trigger download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'output.csv';
+        a.download = 'attendance.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function downloadFilteredCSV(data) {
+        // Filter data: persons with beenThroughProcess set to false and action not blank
+        const filteredData = data.filter(person => !person.beenThroughProcess && person.action !== "");
+
+        // Create CSV header
+        const headerRow = ["firstName", "lastName", "memberType", "Text", "Post Card", "Phone Call", "Visit"];
+
+        // Capitalize the first letter of each word
+        const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+        // Create CSV rows
+        const csvRows = [headerRow.join(',')];
+        filteredData.forEach(person => {
+            const actionCapitalized = {
+                "text": capitalize("text"),
+                "post card": capitalize("post card"),
+                "phone call": capitalize("phone call"),
+                "visit": capitalize("visit")
+            };
+
+            const row = [
+                person.firstName,
+                person.lastName,
+                person.memberType,
+                actionCapitalized[person.action] === capitalize("text") ? capitalize("text") : "",
+                actionCapitalized[person.action] === capitalize("post card") ? capitalize("post card") : "",
+                actionCapitalized[person.action] === capitalize("phone call") ? capitalize("phone call") : "",
+                actionCapitalized[person.action] === capitalize("visit") ? capitalize("visit") : ""
+            ].join(',');
+            csvRows.push(row);
+        });
+
+        // Create CSV content
+        const csvContent = csvRows.join('\n');
+
+        // Trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'outreach.csv';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
