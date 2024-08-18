@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const text = e.target.result;
                 const data = parseCSV(text);
                 displayData(data);
+                downloadCSV(data);
             };
 
             reader.readAsText(file);
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 memberType: "n/a", // Default memberType
                 beenThroughProcess: false, // Default beenThroughProcess
                 action: "", // Default action
-                dates: [] // Initialize dates array
+                dates: {} // Initialize dates object
             };
 
             // Track added dates to avoid duplicates and manage weeksAbsent
@@ -88,18 +89,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         person.beenThroughProcess = true;
                     }
 
-                    person.dates.push({
-                        date: dateHeader,
-                        weeksAbsent: weeksAbsent
-                    });
+                    person.dates[dateHeader] = weeksAbsent;
 
                     addedDates.add(dateHeader); // Mark date as added
                 }
             });
 
-            // Set action based on the last entry in the dates array
-            if (person.dates.length > 0) {
-                const lastWeeksAbsent = person.dates[person.dates.length - 1].weeksAbsent;
+            // Set action based on the last entry in the dates object
+            const dateEntries = Object.entries(person.dates);
+            if (dateEntries.length > 0) {
+                const lastWeeksAbsent = dateEntries[dateEntries.length - 1][1];
                 if (lastWeeksAbsent === 2) {
                     person.action = "text";
                 } else if (lastWeeksAbsent === 3 || lastWeeksAbsent === 4) {
@@ -126,5 +125,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayData(data) {
         output.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function downloadCSV(data) {
+        // Create CSV header
+        const headers = ["firstName", "lastName", "memberType", "beenThroughProcess", "action"];
+        // Collect all unique date headers in the order they are encountered
+        const dateHeaders = [];
+        const dateHeaderSet = new Set(); // To check for duplicates
+    
+        data.forEach(person => {
+            Object.keys(person.dates).forEach(date => {
+                if (!dateHeaderSet.has(date)) {
+                    dateHeaderSet.add(date);
+                    dateHeaders.push(date);
+                }
+            });
+        });
+    
+        // Create CSV header row
+        const headerRow = [...headers, ...dateHeaders].join(',');
+    
+        // Create CSV rows
+        const csvRows = [headerRow];
+        data.forEach(person => {
+            const row = [
+                person.firstName,
+                person.lastName,
+                person.memberType,
+                person.beenThroughProcess,
+                person.action,
+                ...dateHeaders.map(date => person.dates[date] !== undefined ? person.dates[date] : "0")
+            ].join(',');
+            csvRows.push(row);
+        });
+    
+        // Create CSV content
+        const csvContent = csvRows.join('\n');
+    
+        // Trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'output.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 });
