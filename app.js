@@ -49,14 +49,15 @@ document.addEventListener('DOMContentLoaded', () => {
             let person = {
                 firstName,
                 lastName,
-                memberType: "N/A", // Default memberType
-                weeksAbsent: 99, // Start at 99 if there has never been a value
+                memberType: "n/a", // Default memberType
                 beenThroughProcess: false, // Default beenThroughProcess
+                action: "", // Default action
                 dates: [] // Initialize dates array
             };
 
             // Track added dates to avoid duplicates and manage weeksAbsent
             const addedDates = new Set();
+            let weeksAbsent = 99; // Start at 99 if there has never been a value
 
             // Fill in unique date data
             dateHeaders.forEach((dateHeader, index) => {
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (parsedDate && isSunday(parsedDate) && !addedDates.has(dateHeader)) {
                     // If there's a value, reset weeksAbsent to 0, otherwise increment it
                     if (dateValue) {
-                        person.weeksAbsent = 0;
+                        weeksAbsent = 0;
 
                         // Determine the memberType based on the last non-absent week
                         if (dateValue === "attended as member") {
@@ -77,24 +78,36 @@ document.addEventListener('DOMContentLoaded', () => {
                             person.memberType = "leader";
                         }
                     } else {
-                        if (person.weeksAbsent !== 99) { // If it wasn't already 99, increment it
-                            person.weeksAbsent++;
+                        if (weeksAbsent !== 99) { // If it wasn't already 99, increment it
+                            weeksAbsent++;
                         }
                     }
 
                     // Check if weeksAbsent exceeds 5 to set beenThroughProcess to true
-                    if (person.weeksAbsent > 5) {
+                    if (weeksAbsent > 5) {
                         person.beenThroughProcess = true;
                     }
 
                     person.dates.push({
                         date: dateHeader,
-                        weeksAbsent: person.weeksAbsent
+                        weeksAbsent: weeksAbsent
                     });
 
                     addedDates.add(dateHeader); // Mark date as added
                 }
             });
+
+            // Set action based on the last entry in the dates array
+            if (person.dates.length > 0) {
+                const lastWeeksAbsent = person.dates[person.dates.length - 1].weeksAbsent;
+                if (lastWeeksAbsent === 2) {
+                    person.action = "text";
+                } else if (lastWeeksAbsent === 3 || lastWeeksAbsent === 4) {
+                    person.action = "post card";
+                } else if (lastWeeksAbsent === 5) {
+                    person.action = "visit";
+                }
+            }
 
             return person;
         });
