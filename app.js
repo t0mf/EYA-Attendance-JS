@@ -174,12 +174,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateFilteredCSVContent(data) {
         const lastDate = getLastDate(data);
+        
         // Filter data: persons with beenThroughProcess set to false and action not blank
         const filteredData = data.filter(person => !person.beenThroughProcess && person.action !== "");
-
+    
+        // Sort filtered data by last name
+        filteredData.sort((a, b) => {
+            const lastNameA = a.lastName.toLowerCase();
+            const lastNameB = b.lastName.toLowerCase();
+            
+            if (lastNameA < lastNameB) {
+                return -1;
+            }
+            if (lastNameA > lastNameB) {
+                return 1;
+            }
+            return 0;
+        });
+    
         // Create CSV header
-        const headerRow = ["First Name", "Last Name", "Member Type", "Text", "Post Card", "Phone Call", "Visit"];
-
+        const headerRow = ["First Name", "Last Name", "Member Type", "Action"];
+    
         // Create CSV rows
         const csvRows = [headerRow];
         filteredData.forEach(person => {
@@ -187,25 +202,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 person.firstName,
                 person.lastName,
                 person.memberType,
-                person.action === "Text" ? person.action : "",
-                person.action === "Post Card" ? person.action : "",
-                person.action === "Phone Call" ? person.action : "",
-                person.action === "Visit" ? person.action : ""
+                person.action
             ];
             csvRows.push(row);
         });
-
+    
         return { csvRows, lastDate };
     }
 
     function generateAttendanceCSVContent(data) {
+        // Sort the data by the last absentWeeks value
+        data.sort((a, b) => {
+            const lastAbsentWeeksA = getLastAbsentWeeks(a.dates);
+            const lastAbsentWeeksB = getLastAbsentWeeks(b.dates);
+            return lastAbsentWeeksB - lastAbsentWeeksA; // Sort in descending order
+        });
+    
         const lastDate = getLastDate(data);
         // Create CSV header
         const headers = ["First Name", "Last Name", "Member Type", "Through Process", "Action"];
         // Collect all unique date headers in the order they are encountered
         const dateHeaders = [];
         const dateHeaderSet = new Set(); // To check for duplicates
-
+    
         data.forEach(person => {
             Object.keys(person.dates).forEach(date => {
                 if (!dateHeaderSet.has(date)) {
@@ -214,10 +233,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-
+    
         // Create CSV header row
         const headerRow = [...headers, ...dateHeaders].join(',');
-
+    
         // Create CSV rows
         const csvRows = [headerRow];
         data.forEach(person => {
@@ -231,16 +250,25 @@ document.addEventListener('DOMContentLoaded', () => {
             ].join(',');
             csvRows.push(row);
         });
-
+    
         // Create CSV content
         const csvContent = csvRows.join('\n');
-
+    
         return { csvContent, lastDate };
+    }
+    
+    // Helper function to get the last absentWeeks value from a person's dates object
+    function getLastAbsentWeeks(dates) {
+        const dateEntries = Object.entries(dates);
+        if (dateEntries.length > 0) {
+            return dateEntries[dateEntries.length - 1][1];
+        }
+        return 99; // Default to 99 if no dates are present
     }
 
     function displayFilteredCSV(data) {
         const { csvRows } = generateFilteredCSVContent(data);
-
+    
         // Display CSV content as a table
         const table = document.createElement('table');
         table.style.width = '100%';
@@ -249,6 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create table header
         const thead = document.createElement('thead');
         const headerRowElement = document.createElement('tr');
+        const th = document.createElement('th'); // Empty header for checkboxes
+        headerRowElement.appendChild(th);
         csvRows[0].forEach(header => {
             const th = document.createElement('th');
             th.textContent = header;
@@ -259,11 +289,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         thead.appendChild(headerRowElement);
         table.appendChild(thead);
-
+    
         // Create table body
         const tbody = document.createElement('tbody');
         csvRows.slice(1).forEach(row => {
             const tr = document.createElement('tr');
+    
+            // Create and add checkbox cell
+            const checkboxCell = document.createElement('td');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.style.marginRight = '8px'; // Add some margin for visual separation
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    tr.style.textDecoration = 'line-through';
+                } else {
+                    tr.style.textDecoration = 'none';
+                }
+            });
+            checkboxCell.appendChild(checkbox);
+            tr.appendChild(checkboxCell);
+    
             row.forEach(cell => {
                 const td = document.createElement('td');
                 td.textContent = cell;
@@ -274,14 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
         table.appendChild(tbody);
-
+    
         // Clear previous output and append the table
         output.innerHTML = '';
         output.appendChild(table);
-
+    
         // Enable and set up download button
         downloadReports.disabled = false;
-
+    
         downloadReports.onclick = () => {
             // Download Attendance CSV
             const blobAttendance = new Blob([attendanceCSVContent], { type: 'text/csv;charset=utf-8;' });
@@ -292,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(aAttendance);
             aAttendance.click();
             document.body.removeChild(aAttendance);
-
+    
             // Download Outreach CSV
             const blobOutreach = new Blob([outreachCSVContent], { type: 'text/csv;charset=utf-8;' });
             const urlOutreach = URL.createObjectURL(blobOutreach);
