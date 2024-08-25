@@ -234,6 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     
+        // Reverse the order of the date headers
+        dateHeaders.reverse();
+    
         // Create CSV header row
         const headerRow = [...headers, ...dateHeaders].join(',');
     
